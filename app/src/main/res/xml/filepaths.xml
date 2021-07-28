@@ -1,3 +1,4 @@
 <paths>
-    <files-path name="images" path="/Pictures/gamdol"/>
+    <files-path name="images" path="Pictures/gamdol"/>
+    <files-path name="pdfs" path="Download/gamdol"/>
 </paths>

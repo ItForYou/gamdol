@@ -13,14 +13,21 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:theme="@style/Theme.Gamdol">
-        <activity android:name=".MainActivity">
 
+        <activity android:name=".MainActivity">
         </activity>
+
+        <activity
+            android:name=".pspdf.CustompdfActivity"
+            android:windowSoftInputMode="adjustNothing"
+            />
+
         <activity android:name=".SplashActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />

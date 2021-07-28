@@ -8,11 +8,10 @@ android {
 
     defaultConfig {
         applicationId "com.itforone.gamdol"
-        minSdkVersion 16
+        minSdkVersion 21
         targetSdkVersion 29
         versionCode 1
         versionName "1.0"
-
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -32,6 +31,9 @@ dependencies {
     // 버터나이프
     implementation 'com.jakewharton:butterknife:10.1.0'
     annotationProcessor 'com.jakewharton:butterknife-compiler:10.1.0'
+
+    //pspdf
+    implementation 'com.pspdfkit:pspdfkit:7.0.0'
 
     implementation 'androidx.appcompat:appcompat:1.3.0'
     implementation 'com.google.android.material:material:1.3.0'
