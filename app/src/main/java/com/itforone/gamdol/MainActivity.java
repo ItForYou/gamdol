@@ -1,10 +1,5 @@
 package com.itforone.gamdol;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.app.DownloadManager;
 import android.content.BroadcastReceiver;
@@ -13,8 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
-import android.graphics.pdf.PdfDocument;
-import android.location.LocationManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -22,12 +15,15 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.WindowManager;
-import android.view.textclassifier.ConversationActions;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
 import com.itforone.gamdol.pspdf.CustompdfActivity;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
@@ -35,11 +31,7 @@ import com.pspdfkit.configuration.sharing.ShareFeatures;
 import com.pspdfkit.document.download.DownloadJob;
 import com.pspdfkit.document.download.DownloadRequest;
 import com.pspdfkit.document.download.Progress;
-import com.pspdfkit.document.providers.DataProvider;
-import com.pspdfkit.listeners.PdfActivityListener;
-import com.pspdfkit.ui.PdfActivity;
 import com.pspdfkit.ui.PdfActivityIntentBuilder;
-import com.pspdfkit.ui.PdfFragment;
 
 import java.io.File;
 
@@ -70,27 +62,41 @@ public class MainActivity extends AppCompatActivity {
     public static Uri path2uri(Context context, String filePath) {
 
         Cursor cursor = null;
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            Log.d("path2uri", "Q");
             cursor = context.getContentResolver().query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, null, "_data = '" + filePath + "'", null, null);
+        }
+        else
+        {
+            Log.d("path2uri", "else Q");
+            cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external"),null,"_data = '" + filePath + "'",null,null);
         }
 
         cursor.moveToNext();
+
         Uri uri = null;
         Log.d("path2uri", filePath);
         if(cursor!=null && cursor.moveToFirst()) {
+
             Log.d("path2uri", "firstexist");
             int id = cursor.getInt(cursor.getColumnIndex("_id"));
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 uri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id);
             }
             else{
-
+                uri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id);
             }
+
+            //    Toast.makeText(context.getApplicationContext(), "version is low!!", Toast.LENGTH_LONG).show();
+
         }
 
 
         return uri;
     }
+
 
     private BroadcastReceiver downdloadReceiver = new BroadcastReceiver() {
         @Override
@@ -131,7 +137,7 @@ public class MainActivity extends AppCompatActivity {
                                     .configuration(config)
                                     .activityClass(CustompdfActivity.class)
                                     .build();
-                           // pdfActivity.showDocument(context, Uri.fromFile(output), config);
+                            // pdfActivity.showDocument(context, Uri.fromFile(output), config);
                             startActivity(intent);
                             flg_showpdf =1;
                         }
@@ -222,14 +228,6 @@ public class MainActivity extends AppCompatActivity {
         long tempTime = System.currentTimeMillis();
         long intervalTime = tempTime - backPrssedTime;
 
-        if(flg_showpdf==1){
-
-
-
-        }
-
-        else {
-
             if (!webView.canGoBack() || webView.getUrl().contains("all_contact")) {
                 if (0 <= intervalTime && 2000 >= intervalTime) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -245,9 +243,8 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 webView.goBack();
             }
-        }
 
-    }
+        }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {

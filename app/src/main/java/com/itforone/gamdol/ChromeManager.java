@@ -30,7 +30,6 @@ public class ChromeManager extends WebChromeClient {
 
     }
 
-
     @Override
     public boolean onCreateWindow(WebView view, boolean isDialog, boolean isUserGesture, Message resultMsg) {
         return false;
@@ -77,8 +76,6 @@ public class ChromeManager extends WebChromeClient {
                         }).create().show();
         return true;
     }
-
-
 
     // For Android 5.0+
     public boolean onShowFileChooser(WebView webView, ValueCallback<Uri[]> filePathCallback, FileChooserParams fileChooserParams) {
