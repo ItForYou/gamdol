@@ -41,7 +41,6 @@ public class WebviewJavainterface {
         this.mainActivity = mainActivity;
     }
 
-
     @JavascriptInterface
         public void show_viewer(int idx) {
 
@@ -100,10 +99,10 @@ public class WebviewJavainterface {
                             request.setTitle("다운로드 항목");
                             request.setDestinationUri(mainActivity.pdffileURI);
                             request.setAllowedOverMetered(true);
-
+                            mainActivity.flg_downloading = 1;
 
                             long mDownloadQueueId = downloadManager.enqueue(request);
-                            mainActivity.flg_downloading = 1;
+
                             return;
                         } catch (Exception e) {
                             e.printStackTrace();

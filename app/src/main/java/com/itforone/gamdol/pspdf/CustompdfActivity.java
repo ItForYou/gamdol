@@ -161,7 +161,7 @@ public class CustompdfActivity extends PdfActivity {
 
     @Override
     public void onBackPressed() {
-        Log.d("save_document", "backpress is init!!");
+     /*   Log.d("save_document", "backpress is init!!");
         final PdfDocument document = requirePdfFragment().getDocument();
 
         if (document == null) {
@@ -176,7 +176,8 @@ public class CustompdfActivity extends PdfActivity {
             Log.d("save_document", flg.toString());
         } catch (IOException e) {
             e.printStackTrace();
-        }
+        }*/
+        super.onBackPressed();
 
     }
 }

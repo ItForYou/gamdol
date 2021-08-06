@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity {
     int flg_downloading = 0, flg_showpdf=0, download_idx;
     CustompdfActivity pdfActivity = new CustompdfActivity();
 
-
     public void set_filePathCallbackLollipop(ValueCallback<Uri[]> filePathCallbackLollipop) {
         this.filePathCallbackLollipop = filePathCallbackLollipop;
     }
@@ -102,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
 
-            flg_downloading = 0;
+
             File file_saved = new File(Environment.getExternalStoragePublicDirectory(
                     Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+String.valueOf(download_idx)+".pdf");
 
@@ -115,15 +114,12 @@ public class MainActivity extends AppCompatActivity {
                             .uri(pdfuri)
                             .build();
 
-
                     final DownloadJob job = DownloadJob.startDownload(request);
                     PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
                             .setEnabledShareFeatures(ShareFeatures.none())
                             .autosaveEnabled(false)
                             .disablePrinting()
                             .build();
-
-
 
                     job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
                         @Override
@@ -140,6 +136,7 @@ public class MainActivity extends AppCompatActivity {
                                     .build();
                             // pdfActivity.showDocument(context, Uri.fromFile(output), config);
                             startActivity(intent);
+                            flg_downloading = 0;
                             flg_showpdf =1;
                         }
 
@@ -185,7 +182,6 @@ public class MainActivity extends AppCompatActivity {
 
         ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_REQUEST_CODE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-
 
         Intent intent = getIntent();
         if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction())) {
