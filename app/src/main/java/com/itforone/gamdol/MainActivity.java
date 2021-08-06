@@ -119,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
                     final DownloadJob job = DownloadJob.startDownload(request);
                     PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
                             .setEnabledShareFeatures(ShareFeatures.none())
+                            .autosaveEnabled(false)
                             .disablePrinting()
                             .build();
 
@@ -168,7 +169,7 @@ public class MainActivity extends AppCompatActivity {
 
             } else {
 
-                Toast.makeText(getApplicationContext(), "not exist!!!", Toast.LENGTH_LONG).show();
+                //Toast.makeText(getApplicationContext(), "not exist!!!", Toast.LENGTH_LONG).show();
 
             }
 

@@ -27,6 +27,8 @@ import com.pspdfkit.document.download.Progress;
 import com.pspdfkit.ui.PdfActivityIntentBuilder;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.List;
 
 public class WebviewJavainterface {
@@ -44,8 +46,9 @@ public class WebviewJavainterface {
         public void show_viewer(int idx) {
 
             if(mainActivity.flg_downloading==0) {
-                String outputFilePath = null;
 
+                String outputFilePath = null;
+/*
                 if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     mainActivity.download_idx =(int) System.currentTimeMillis();
                     outputFilePath = Environment.getExternalStoragePublicDirectory(
@@ -56,15 +59,20 @@ public class WebviewJavainterface {
                     outputFilePath = Environment.getExternalStoragePublicDirectory(
                             Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + idx + ".pdf";
                 }
+*/
+                mainActivity.download_idx =idx;
+                outputFilePath = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + idx + ".pdf";
 
                 File outputFile = new File(outputFilePath);
-                if (!outputFile.exists()) {
+                if(outputFile.getParentFile().exists()){
                     outputFile.getParentFile().mkdirs();
-
+                }
+                if (!outputFile.exists()) {
 
                     DownloadManager downloadManager = (DownloadManager) mainActivity.getSystemService(Context.DOWNLOAD_SERVICE);
 
-                    Uri downloadUri = Uri.parse(mainActivity.getString(R.string.pdfpath) + "0.pdf");
+                    Uri downloadUri = Uri.parse(mainActivity.getString(R.string.pdfpath) + idx+".pdf");
                     mainActivity.pdffileURI = Uri.fromFile(outputFile);
                     DownloadManager.Request request = new DownloadManager.Request(downloadUri);
                     request.setTitle("다운로드 항목");
@@ -81,6 +89,26 @@ public class WebviewJavainterface {
                 }
                 else{
 
+                    if(outputFile.exists() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q){
+                        try {
+                            outputFile.delete();
+                            DownloadManager downloadManager = (DownloadManager) mainActivity.getSystemService(Context.DOWNLOAD_SERVICE);
+
+                            Uri downloadUri = Uri.parse(mainActivity.getString(R.string.pdfpath) + idx+".pdf");
+                            mainActivity.pdffileURI = Uri.fromFile(outputFile);
+                            DownloadManager.Request request = new DownloadManager.Request(downloadUri);
+                            request.setTitle("다운로드 항목");
+                            request.setDestinationUri(mainActivity.pdffileURI);
+                            request.setAllowedOverMetered(true);
+
+
+                            long mDownloadQueueId = downloadManager.enqueue(request);
+                            mainActivity.flg_downloading = 1;
+                            return;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
 
                     //mainActivity.pdffileURI = Uri.fromFile(outputFile);
                     final Uri pdfuri = mainActivity.path2uri(mainActivity,Uri.fromFile(outputFile).getPath());
@@ -94,6 +122,7 @@ public class WebviewJavainterface {
                         PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity)
                                 .setEnabledShareFeatures(ShareFeatures.none())
                                 .disablePrinting()
+                                .autosaveEnabled(false)
                                 .build();
 
 
@@ -127,13 +156,6 @@ public class WebviewJavainterface {
                 }
             }
         }
-
-
-
-        /*
-
-
-         */
 
     }
 

@@ -82,7 +82,7 @@ public class CustompdfActivity extends PdfActivity {
     @Override
     public boolean onDocumentSave(@NonNull @NotNull PdfDocument document, @NonNull @NotNull DocumentSaveOptions saveOptions) {
         Log.d("pspdf_custom_save","init!");
-        Uri uri = document.getDocumentSource().getFileUri();
+     /*   Uri uri = document.getDocumentSource().getFileUri();
         File file = new File(uri.getPath());
         String outputFilePath = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/test_another.pdf";
@@ -154,11 +154,29 @@ public class CustompdfActivity extends PdfActivity {
             }
         }
          Log.d("pspdf_custom_save",uri.getPath());
-
+*/
 
         return super.onDocumentSave(document, saveOptions);
     }
 
+    @Override
+    public void onBackPressed() {
+        Log.d("save_document", "backpress is init!!");
+        final PdfDocument document = requirePdfFragment().getDocument();
 
+        if (document == null) {
+            Log.d("save_document", "document is null!!");
+            return;
+        }
 
+// Manually save the document.
+        try {
+
+            Boolean flg = document.saveIfModified();
+            Log.d("save_document", flg.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
 }
