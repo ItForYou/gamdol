@@ -44,6 +44,35 @@ public class CustompdfActivity extends PdfActivity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
         super.onCreate(savedInstanceState);
 
+
+    }
+
+    @Override
+    protected void onDestroy() {
+
+        File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
+        try {
+            File[] childFileList = file_delete_init.listFiles();
+            Log.d("file_delete","init");
+            Log.d("file_delete",file_delete_init.toString());
+            Log.d("file_delete",String.valueOf(childFileList.length));
+            if (file_delete_init.exists()) {
+                Log.d("file_delete","exist!!");
+                for (File childFile : childFileList) {
+                    if (childFile.isDirectory()) {
+                    } else {
+                        Log.d("file_delete",childFile.getName());
+                        childFile.delete(); //하위 파일
+                    }
+                }
+                file_delete_init.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        super.onDestroy();
     }
 
     @NonNull
@@ -161,6 +190,33 @@ public class CustompdfActivity extends PdfActivity {
 
     @Override
     public void onBackPressed() {
+/*
+        final PdfDocument document = requirePdfFragment().getDocument();
+        if (document == null) {
+            Log.d("reponse_back", "document is null!");
+            return;
+        }
+        final DataProvider dataProvider = document.getDocumentSource().getDataProvider();
+
+        if (dataProvider == null){
+            Log.d("reponse_back", "dataprovider is null!");
+            return;
+        }
+
+
+        final byte[] data = dataProvider.read(dataProvider.getSize(), 0);
+        final RequestBody requestBody = RequestBody.create(data, MediaType.parse("application/pdf"));
+        final Request request = new Request.Builder().url("http://127.0.0.1:12345").post(requestBody).build();
+        final OkHttpClient client = new OkHttpClient();
+        try {
+            final Response response = client.newCall(request).execute();
+            Log.d("reponse_back", response.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+*/
+
      /*   Log.d("save_document", "backpress is init!!");
         final PdfDocument document = requirePdfFragment().getDocument();
 

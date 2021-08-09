@@ -50,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     Uri mCapturedImageURI,pdffileURI;
     @BindView(R.id.mWebview)
     WebView webView;
+
     private long backPrssedTime = 0;
     int flg_downloading = 0, flg_showpdf=0, download_idx;
     CustompdfActivity pdfActivity = new CustompdfActivity();
@@ -92,8 +93,8 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-
         return uri;
+
     }
 
 
@@ -107,9 +108,11 @@ public class MainActivity extends AppCompatActivity {
 
 
             if (file_saved.exists() && pdffileURI != null) {
-
+                Log.d("onReceive","file_saved is not null!");
                 final Uri pdfuri = path2uri(context,pdffileURI.getPath());
+
                 if(pdfuri!=null) {
+                    Log.d("onReceive","pdfuri is not null!");
                     final DownloadRequest request = new DownloadRequest.Builder(MainActivity.this)
                             .uri(pdfuri)
                             .build();
@@ -134,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
                                     .configuration(config)
                                     .activityClass(CustompdfActivity.class)
                                     .build();
+                            Log.d("onReceive",pdfuri.toString());
                             // pdfActivity.showDocument(context, Uri.fromFile(output), config);
                             startActivity(intent);
                             flg_downloading = 0;
@@ -147,10 +151,6 @@ public class MainActivity extends AppCompatActivity {
                     });
 
                 }
-
-
-
-
 
 //                final Uri pdfuri = Uri.parse("file:///android_asset/temp_pdf.pdf");
 
@@ -174,6 +174,41 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @Override
+    protected void onDestroy() {
+
+        File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
+        try {
+            File[] childFileList = file_delete_init.listFiles();
+            Log.d("file_delete","init");
+            Log.d("file_delete",file_delete_init.toString());
+            Log.d("file_delete",String.valueOf(childFileList.length));
+            if (file_delete_init.exists()) {
+                Log.d("file_delete","exist!!");
+                for (File childFile : childFileList) {
+                    if (childFile.isDirectory()) {
+                    } else {
+                        Log.d("file_delete",childFile.getName());
+                        childFile.delete(); //하위 파일
+                    }
+                }
+                file_delete_init.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+    }
+
+
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
@@ -193,6 +228,28 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
+      /*  File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
+        try {
+            File[] childFileList = file_delete_init.listFiles();
+            Log.d("file_delete","init");
+            Log.d("file_delete",file_delete_init.toString());
+            Log.d("file_delete",String.valueOf(childFileList.length));
+            if (file_delete_init.exists()) {
+                Log.d("file_delete","exist!!");
+                for (File childFile : childFileList) {
+                    if (childFile.isDirectory()) {
+                    } else {
+                        Log.d("file_delete",childFile.getName());
+                        childFile.delete(); //하위 파일
+                    }
+                }
+                file_delete_init.delete();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+*/
         registerReceiver(downdloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         webView.setWebChromeClient(new ChromeManager(this, this));
