@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 import androidx.core.content.FileProvider;
 
 import com.itforone.gamdol.pspdf.CustompdfActivity;
+import com.itforone.gamdol.pspdf.WebDownloadSource;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
 import com.pspdfkit.configuration.sharing.ShareFeatures;
 import com.pspdfkit.document.download.DownloadJob;
@@ -28,6 +29,8 @@ import com.pspdfkit.ui.PdfActivityIntentBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.util.List;
 
@@ -43,124 +46,61 @@ public class WebviewJavainterface {
     }
 
     @JavascriptInterface
-    public void show_viewer(int idx) {
+    public void show_viewer(String idx) {
 
-    /*    final Uri uri = Uri.parse("file:///android_asset/temp_pdf.pdf");
-        final PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity.getApplicationContext()).build();
-        CustompdfActivity.showDocument(mainActivity.getApplicationContext(), uri, config);
-*/
-        if (mainActivity.flg_downloading == 0) {
-
-            String outputFilePath = null;
-
-                if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    mainActivity.download_idx =(int) System.currentTimeMillis();
-                    outputFilePath = Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + mainActivity.download_idx + ".pdf";
-                }
-                else{
-                    mainActivity.download_idx =idx;
-                    outputFilePath = Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + idx + ".pdf";
-                }
-
-       /*     mainActivity.download_idx = idx;
-            outputFilePath = Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + idx + ".pdf";*/
-
-            File outputFile = new File(outputFilePath);
-            if (outputFile.getParentFile().exists()) {
-                outputFile.getParentFile().mkdirs();
-            }
-            if (!outputFile.exists()) {
-
-                DownloadManager downloadManager = (DownloadManager) mainActivity.getSystemService(Context.DOWNLOAD_SERVICE);
-
-                Uri downloadUri = Uri.parse(mainActivity.getString(R.string.pdfpath) + idx + ".pdf");
-                mainActivity.pdffileURI = Uri.fromFile(outputFile);
-                Log.d("download_pdf",mainActivity.pdffileURI.toString());
-                DownloadManager.Request request = new DownloadManager.Request(downloadUri);
-                request.setTitle("다운로드 항목");
-                request.setDestinationUri(mainActivity.pdffileURI);
-                request.setAllowedOverMetered(true);
-
-
-                long mDownloadQueueId = downloadManager.enqueue(request);
-                mainActivity.flg_downloading = 1;
-
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                    Toast.makeText(mainActivity.getApplicationContext(), "다운이 완료되었습니다. 다시한번 클릭해주세요.", Toast.LENGTH_LONG).show();
-                }
-            } else {
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-/*
-                    try {
-                        outputFile.delete();
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-*/
-
-                    DownloadManager downloadManager = (DownloadManager) mainActivity.getSystemService(Context.DOWNLOAD_SERVICE);
-
-                    Uri downloadUri = Uri.parse(mainActivity.getString(R.string.pdfpath) + idx + ".pdf");
-                    mainActivity.pdffileURI = Uri.fromFile(outputFile);
-                    Log.d("download_pdf",mainActivity.pdffileURI.toString());
-                    DownloadManager.Request request = new DownloadManager.Request(downloadUri);
-                    request.setTitle("다운로드 항목");
-                    request.setDestinationUri(mainActivity.pdffileURI);
-                    request.setAllowedOverMetered(true);
-                    mainActivity.flg_downloading = 1;
-
-                    long mDownloadQueueId = downloadManager.enqueue(request);
-
-                    return;
-
-                }
-
-                //mainActivity.pdffileURI = Uri.fromFile(outputFile);
-                final Uri pdfuri = mainActivity.path2uri(mainActivity, Uri.fromFile(outputFile).getPath());
-                if (pdfuri != null) {
-                    final DownloadRequest request = new DownloadRequest.Builder(mainActivity)
-                            .uri(pdfuri)
-                            .build();
-
-
-                    final DownloadJob job = DownloadJob.startDownload(request);
-                    PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity)
-                            .setEnabledShareFeatures(ShareFeatures.none())
-                            .disablePrinting()
-                            .autosaveEnabled(false)
-                            .build();
-
-
-                    job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
-                        @Override
-                        public void onProgress(@NonNull Progress progress) {
-                            // progressBar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
-                        }
-
-                        @Override
-                        public void onComplete(@NonNull File output) {
-
-                            final Intent intent = PdfActivityIntentBuilder.fromUri(mainActivity, Uri.fromFile(output))
-                                    .configuration(config)
-                                    .activityClass(CustompdfActivity.class)
-                                    .build();
-                            // pdfActivity.showDocument(context, Uri.fromFile(output), config);
-                            mainActivity.startActivity(intent);
-                            mainActivity.flg_showpdf = 1;
-                        }
-
-                        @Override
-                        public void onError(@NonNull Throwable exception) {
-                            //  handleDownloadError(exception);
-                        }
-                    });
-                }
-            }
+        WebDownloadSource webDownloadSource = null;
+        try {
+             webDownloadSource = new WebDownloadSource(new URL(mainActivity.getString(R.string.pdfpath)+idx+".pdf"));
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
         }
+
+        File file_saved = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+idx+".pdf");
+
+        if(!file_saved.getParentFile().exists()){
+            file_saved.getParentFile().mkdir();
+        }
+
+        final DownloadRequest request = new DownloadRequest.Builder(mainActivity.getApplicationContext())
+                .overwriteExisting(true)
+                .outputFile(file_saved)
+                .source(webDownloadSource)
+                .build();
+
+        final DownloadJob job = DownloadJob.startDownload(request);
+        PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity.getApplicationContext())
+                .setEnabledShareFeatures(ShareFeatures.none())
+                .autosaveEnabled(false)
+                .disablePrinting()
+                .build();
+
+        job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
+            @Override
+            public void onProgress(@NonNull Progress progress) {
+                // progressBar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
+            }
+
+            @Override
+            public void onComplete(@NonNull File output) {
+
+                final Intent intent = PdfActivityIntentBuilder.fromUri(mainActivity, Uri.fromFile(output))
+                        .configuration(config)
+                        .activityClass(CustompdfActivity.class)
+                        .build();
+                // pdfActivity.showDocument(context, Uri.fromFile(output), config);
+                mainActivity.startActivity(intent);
+                mainActivity.flg_downloading = 0;
+                mainActivity.flg_showpdf =1;
+            }
+
+            @Override
+            public void onError(@NonNull Throwable exception) {
+                //  handleDownloadError(exception);
+            }
+        });
+
+
     }
 
 }

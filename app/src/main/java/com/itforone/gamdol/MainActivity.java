@@ -26,6 +26,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import com.itforone.gamdol.pspdf.CustompdfActivity;
+import com.itforone.gamdol.pspdf.WebDownloadSource;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
 import com.pspdfkit.configuration.sharing.ShareFeatures;
 import com.pspdfkit.document.download.DownloadJob;
@@ -34,6 +35,8 @@ import com.pspdfkit.document.download.Progress;
 import com.pspdfkit.ui.PdfActivityIntentBuilder;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -96,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
         return uri;
 
     }
-
+/*
 
     private BroadcastReceiver downdloadReceiver = new BroadcastReceiver() {
         @Override
@@ -112,9 +115,18 @@ public class MainActivity extends AppCompatActivity {
                 final Uri pdfuri = path2uri(context,pdffileURI.getPath());
 
                 if(pdfuri!=null) {
+
                     Log.d("onReceive","pdfuri is not null!");
+
+                    try {
+                        WebDownloadSource webDownloadSource = new WebDownloadSource(new URL(getString(R.string.pdfpath)+download_idx+".pdf"));
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
                     final DownloadRequest request = new DownloadRequest.Builder(MainActivity.this)
                             .uri(pdfuri)
+                            .overwriteExisting(true)
+                            .outputFile(file_saved)
                             .build();
 
                     final DownloadJob job = DownloadJob.startDownload(request);
@@ -172,9 +184,11 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
-
+*/
     @Override
     protected void onDestroy() {
+
+        //관련 파일 모두 삭제 (유출방지용 & 경로 중복 에러 방지)
 
         File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
@@ -250,7 +264,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 */
-        registerReceiver(downdloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        //registerReceiver(downdloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         webView.setWebChromeClient(new ChromeManager(this, this));
         webView.setWebViewClient(new ViewManager(this, this));

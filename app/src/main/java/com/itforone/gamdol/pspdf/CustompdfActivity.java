@@ -1,8 +1,5 @@
 package com.itforone.gamdol.pspdf;
-import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.WindowManager;
@@ -10,6 +7,7 @@ import android.view.WindowManager;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.itforone.gamdol.R;
 import com.pspdfkit.document.DocumentSaveOptions;
 import com.pspdfkit.document.PdfDocument;
 import com.pspdfkit.document.providers.DataProvider;
@@ -17,15 +15,8 @@ import com.pspdfkit.ui.PdfActivity;
 
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.channels.FileChannel;
-import java.nio.file.Files;
 import java.util.List;
 
 import okhttp3.MediaType;
@@ -33,7 +24,6 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
-
 
 public class CustompdfActivity extends PdfActivity {
 
@@ -49,8 +39,9 @@ public class CustompdfActivity extends PdfActivity {
 
     @Override
     protected void onDestroy() {
+        //관련 파일 모두 삭제 (유출방지용)
 
-        File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
+        /*   File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
         try {
             File[] childFileList = file_delete_init.listFiles();
@@ -70,7 +61,7 @@ public class CustompdfActivity extends PdfActivity {
             }
         } catch (Exception e) {
             e.printStackTrace();
-        }
+        }*/
 
         super.onDestroy();
     }
@@ -190,50 +181,31 @@ public class CustompdfActivity extends PdfActivity {
 
     @Override
     public void onBackPressed() {
-/*
+
+
         final PdfDocument document = requirePdfFragment().getDocument();
         if (document == null) {
-            Log.d("reponse_back", "document is null!");
+            Log.d("response_remote", "document is null!!");
             return;
         }
         final DataProvider dataProvider = document.getDocumentSource().getDataProvider();
-
-        if (dataProvider == null){
-            Log.d("reponse_back", "dataprovider is null!");
+        if (dataProvider == null) {
+            Log.d("response_remote", "dataprovider is null!!");
             return;
         }
-
 
         final byte[] data = dataProvider.read(dataProvider.getSize(), 0);
         final RequestBody requestBody = RequestBody.create(data, MediaType.parse("application/pdf"));
-        final Request request = new Request.Builder().url("http://127.0.0.1:12345").post(requestBody).build();
+        final Request request = new Request.Builder().url(getString(R.string.bbs)+"update_pdffile.php").post(requestBody).build();
         final OkHttpClient client = new OkHttpClient();
         try {
             final Response response = client.newCall(request).execute();
-            Log.d("reponse_back", response.toString());
+            Log.d("response_remote", response.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-*/
-
-     /*   Log.d("save_document", "backpress is init!!");
-        final PdfDocument document = requirePdfFragment().getDocument();
-
-        if (document == null) {
-            Log.d("save_document", "document is null!!");
-            return;
-        }
-
-// Manually save the document.
-        try {
-
-            Boolean flg = document.saveIfModified();
-            Log.d("save_document", flg.toString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }*/
-        super.onBackPressed();
+       // super.onBackPressed();
 
     }
 }
