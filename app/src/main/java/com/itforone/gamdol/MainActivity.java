@@ -19,12 +19,17 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.viewpager2.widget.ViewPager2;
 
+import com.itforone.gamdol.UploadPdf.UploadHelper;
+import com.itforone.gamdol.UploadPdf.UploadResult;
+import com.itforone.gamdol.UploadPdf.UploadService;
 import com.itforone.gamdol.pspdf.CustompdfActivity;
 import com.itforone.gamdol.pspdf.WebDownloadSource;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
@@ -37,9 +42,18 @@ import com.pspdfkit.ui.PdfActivityIntentBuilder;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.channels.InterruptedByTimeoutException;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+import static com.itforone.gamdol.WebviewJavainterface.RESULT_DOCUMENT;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,13 +63,17 @@ public class MainActivity extends AppCompatActivity {
     };
     static final int PERMISSION_REQUEST_CODE = 1;
     final int FILECHOOSER_LOLLIPOP_REQ_CODE = 1300;
+
     ValueCallback<Uri[]> filePathCallbackLollipop;
-    Uri mCapturedImageURI,pdffileURI;
+    Uri mCapturedImageURI, pdffileURI;
     @BindView(R.id.mWebview)
     WebView webView;
+    @BindView(R.id.progressbar)
+    ProgressBar progressbar;
 
     private long backPrssedTime = 0;
-    int flg_downloading = 0, flg_showpdf=0, download_idx;
+    int flg_downloading = 0, flg_showpdf = 0;
+    String download_idx = "";
     CustompdfActivity pdfActivity = new CustompdfActivity();
 
     public void set_filePathCallbackLollipop(ValueCallback<Uri[]> filePathCallbackLollipop) {
@@ -69,26 +87,23 @@ public class MainActivity extends AppCompatActivity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             Log.d("path2uri", "Q");
             cursor = context.getContentResolver().query(MediaStore.Downloads.EXTERNAL_CONTENT_URI, null, "_data = '" + filePath + "'", null, null);
-        }
-        else
-        {
+        } else {
             Log.d("path2uri", "else Q");
-            cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external"),null,"_data = '" + filePath + "'",null,null);
+            cursor = context.getContentResolver().query(MediaStore.Files.getContentUri("external"), null, "_data = '" + filePath + "'", null, null);
         }
 
         cursor.moveToNext();
 
         Uri uri = null;
         Log.d("path2uri", filePath);
-        if(cursor!=null && cursor.moveToFirst()) {
+        if (cursor != null && cursor.moveToFirst()) {
 
             Log.d("path2uri", "firstexist");
             int id = cursor.getInt(cursor.getColumnIndex("_id"));
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 uri = ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, id);
-            }
-            else{
+            } else {
                 uri = ContentUris.withAppendedId(MediaStore.Files.getContentUri("external"), id);
             }
 
@@ -99,110 +114,111 @@ public class MainActivity extends AppCompatActivity {
         return uri;
 
     }
-/*
 
-    private BroadcastReceiver downdloadReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
+    /*
 
-
-            File file_saved = new File(Environment.getExternalStoragePublicDirectory(
-                    Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+String.valueOf(download_idx)+".pdf");
+        private BroadcastReceiver downdloadReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
 
 
-            if (file_saved.exists() && pdffileURI != null) {
-                Log.d("onReceive","file_saved is not null!");
-                final Uri pdfuri = path2uri(context,pdffileURI.getPath());
+                File file_saved = new File(Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+String.valueOf(download_idx)+".pdf");
 
-                if(pdfuri!=null) {
 
-                    Log.d("onReceive","pdfuri is not null!");
+                if (file_saved.exists() && pdffileURI != null) {
+                    Log.d("onReceive","file_saved is not null!");
+                    final Uri pdfuri = path2uri(context,pdffileURI.getPath());
 
-                    try {
-                        WebDownloadSource webDownloadSource = new WebDownloadSource(new URL(getString(R.string.pdfpath)+download_idx+".pdf"));
-                    } catch (MalformedURLException e) {
-                        e.printStackTrace();
+                    if(pdfuri!=null) {
+
+                        Log.d("onReceive","pdfuri is not null!");
+
+                        try {
+                            WebDownloadSource webDownloadSource = new WebDownloadSource(new URL(getString(R.string.pdfpath)+download_idx+".pdf"));
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
+                        final DownloadRequest request = new DownloadRequest.Builder(MainActivity.this)
+                                .uri(pdfuri)
+                                .overwriteExisting(true)
+                                .outputFile(file_saved)
+                                .build();
+
+                        final DownloadJob job = DownloadJob.startDownload(request);
+                        PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
+                                .setEnabledShareFeatures(ShareFeatures.none())
+                                .autosaveEnabled(false)
+                                .disablePrinting()
+                                .build();
+
+                        job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
+                            @Override
+                            public void onProgress(@NonNull Progress progress) {
+                                // progressBar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
+                            }
+
+                            @Override
+                            public void onComplete(@NonNull File output) {
+
+                                final Intent intent = PdfActivityIntentBuilder.fromUri(context, Uri.fromFile(output))
+                                        .configuration(config)
+                                        .activityClass(CustompdfActivity.class)
+                                        .build();
+                                Log.d("onReceive",pdfuri.toString());
+                                // pdfActivity.showDocument(context, Uri.fromFile(output), config);
+                                startActivity(intent);
+                                flg_downloading = 0;
+                                flg_showpdf =1;
+                            }
+
+                            @Override
+                            public void onError(@NonNull Throwable exception) {
+                                //  handleDownloadError(exception);
+                            }
+                        });
+
                     }
-                    final DownloadRequest request = new DownloadRequest.Builder(MainActivity.this)
-                            .uri(pdfuri)
-                            .overwriteExisting(true)
-                            .outputFile(file_saved)
-                            .build();
 
-                    final DownloadJob job = DownloadJob.startDownload(request);
-                    PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
-                            .setEnabledShareFeatures(ShareFeatures.none())
-                            .autosaveEnabled(false)
-                            .disablePrinting()
-                            .build();
+    //                final Uri pdfuri = Uri.parse("file:///android_asset/temp_pdf.pdf");
 
-                    job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
-                        @Override
-                        public void onProgress(@NonNull Progress progress) {
-                            // progressBar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
-                        }
+                    //final Uri pdfuri = Uri.parse("file:///Download/temppdf/temp_pdf.pdf");
+                    //Log.d("pspdf_file", String.valueOf(pdfuri.getPath()));
+    //                PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
+    //                        .setEnabledShareFeatures(ShareFeatures.none())
+    //                        .disablePrinting()
+    //                        .autosaveEnabled(false)
+    //                        .build();
+    //
+    //                CustompdfActivity.showDocument(MainActivity.this, pdfuri, null, config);
 
-                        @Override
-                        public void onComplete(@NonNull File output) {
+                } else {
 
-                            final Intent intent = PdfActivityIntentBuilder.fromUri(context, Uri.fromFile(output))
-                                    .configuration(config)
-                                    .activityClass(CustompdfActivity.class)
-                                    .build();
-                            Log.d("onReceive",pdfuri.toString());
-                            // pdfActivity.showDocument(context, Uri.fromFile(output), config);
-                            startActivity(intent);
-                            flg_downloading = 0;
-                            flg_showpdf =1;
-                        }
-
-                        @Override
-                        public void onError(@NonNull Throwable exception) {
-                            //  handleDownloadError(exception);
-                        }
-                    });
+                    //Toast.makeText(getApplicationContext(), "not exist!!!", Toast.LENGTH_LONG).show();
 
                 }
 
-//                final Uri pdfuri = Uri.parse("file:///android_asset/temp_pdf.pdf");
-
-                //final Uri pdfuri = Uri.parse("file:///Download/temppdf/temp_pdf.pdf");
-                //Log.d("pspdf_file", String.valueOf(pdfuri.getPath()));
-//                PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(MainActivity.this)
-//                        .setEnabledShareFeatures(ShareFeatures.none())
-//                        .disablePrinting()
-//                        .autosaveEnabled(false)
-//                        .build();
-//
-//                CustompdfActivity.showDocument(MainActivity.this, pdfuri, null, config);
-
-            } else {
-
-                //Toast.makeText(getApplicationContext(), "not exist!!!", Toast.LENGTH_LONG).show();
-
             }
-
-        }
-    };
-*/
+        };
+    */
     @Override
     protected void onDestroy() {
 
         //관련 파일 모두 삭제 (유출방지용 & 경로 중복 에러 방지)
 
-        File file_delete_init= new File(Environment.getExternalStoragePublicDirectory(
+        File file_delete_init = new File(Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_DOWNLOADS + "/pdfFiles/").toString());
         try {
             File[] childFileList = file_delete_init.listFiles();
-            Log.d("file_delete","init");
-            Log.d("file_delete",file_delete_init.toString());
-            Log.d("file_delete",String.valueOf(childFileList.length));
+            Log.d("file_delete", "init");
+            Log.d("file_delete", file_delete_init.toString());
+            Log.d("file_delete", String.valueOf(childFileList.length));
             if (file_delete_init.exists()) {
-                Log.d("file_delete","exist!!");
+                Log.d("file_delete", "exist!!");
                 for (File childFile : childFileList) {
                     if (childFile.isDirectory()) {
                     } else {
-                        Log.d("file_delete",childFile.getName());
+                        Log.d("file_delete", childFile.getName());
                         childFile.delete(); //하위 파일
                     }
                 }
@@ -219,8 +235,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
     }
-
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -296,23 +310,23 @@ public class MainActivity extends AppCompatActivity {
         long tempTime = System.currentTimeMillis();
         long intervalTime = tempTime - backPrssedTime;
 
-            if (!webView.canGoBack() || webView.getUrl().contains("all_contact")) {
-                if (0 <= intervalTime && 2000 >= intervalTime) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        finishAndRemoveTask();
-                    } else {
-                        finish();
-                    }
-
+        if (!webView.canGoBack() || webView.getUrl().contains("all_contact")) {
+            if (0 <= intervalTime && 2000 >= intervalTime) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    finishAndRemoveTask();
                 } else {
-                    backPrssedTime = tempTime;
-                    Toast.makeText(getApplicationContext(), "한번 더 뒤로가기 누를시 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+                    finish();
                 }
-            } else {
-                webView.goBack();
-            }
 
+            } else {
+                backPrssedTime = tempTime;
+                Toast.makeText(getApplicationContext(), "한번 더 뒤로가기 누를시 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            webView.goBack();
         }
+
+    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -344,8 +358,18 @@ public class MainActivity extends AppCompatActivity {
 
                     filePathCallbackLollipop.onReceiveValue(result);
                     filePathCallbackLollipop = null;
+
                 }
                 break;
+            }
+            case RESULT_DOCUMENT: {
+
+
+
+
+
+
+
             }
 
         }

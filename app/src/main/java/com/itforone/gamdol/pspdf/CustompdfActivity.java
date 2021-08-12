@@ -1,13 +1,20 @@
 package com.itforone.gamdol.pspdf;
+
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.WindowManager;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.itforone.gamdol.R;
+import com.itforone.gamdol.UploadPdf.UploadHelper;
+import com.itforone.gamdol.UploadPdf.UploadResult;
+import com.itforone.gamdol.UploadPdf.UploadService;
 import com.pspdfkit.document.DocumentSaveOptions;
 import com.pspdfkit.document.PdfDocument;
 import com.pspdfkit.document.providers.DataProvider;
@@ -16,22 +23,37 @@ import com.pspdfkit.ui.PdfActivity;
 import org.jetbrains.annotations.NotNull;
 
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.observers.DisposableSingleObserver;
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
-import okhttp3.Response;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
 public class CustompdfActivity extends PdfActivity {
 
+    String fromIdx;
 
     @Override
     protected void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+
+        Intent i = getIntent();
+
+        if (i != null) {
+            fromIdx = i.getStringExtra("open_idx");
+        }
+        Log.d("custom_init", fromIdx);
+
         super.onCreate(savedInstanceState);
 
 
@@ -63,6 +85,68 @@ public class CustompdfActivity extends PdfActivity {
             e.printStackTrace();
         }*/
 
+        /** Manually saving inside the activity. **/
+        PdfDocument document = getPdfFragment().getDocument();
+        if (document == null) {
+            // No document loaded.
+            return;
+        }
+        document.saveIfModifiedAsync()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new DisposableSingleObserver<Boolean>() {
+                    @Override
+                    public void onError(Throwable e) {
+                        /** Saving has failed. The exception holds additional failure details. **/
+                        //    Toast.makeText(CustompdfActivity.this, "Failed to save the document!", Toast.LENGTH_SHORT).show();
+                    }
+
+                    @Override
+                    public void onSuccess(Boolean saved) {
+                        if (saved) {
+                            /** Changes were saved successfully! **/
+                            File file_saved = new File(Environment.getExternalStoragePublicDirectory(
+                                    Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + fromIdx + ".pdf");
+
+                            RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file_saved);
+                            MultipartBody.Part file = MultipartBody.Part.createFormData("pdf_file", file_saved.getName(), requestFile);
+                            RequestBody fromidx = RequestBody.create(MediaType.parse("text/plain"), fromIdx);
+
+                            UploadService networkService = UploadHelper.getRetrofit().create(UploadService.class);
+                            Call<UploadResult> call = networkService.uploadFile(fromidx,file);
+                            call.enqueue(new Callback<UploadResult>() {
+                                @Override
+                                public void onResponse(Call<UploadResult> call, Response<UploadResult> response) {
+
+                                    Log.d("result_call_response", response.toString());
+                                    if (response.isSuccessful()) {
+                                        Log.d("result_call_success", "success");
+
+                                    } else {
+                                        Log.d("result_call_fail", "fail");
+
+                                    }
+
+                                }
+
+                                @Override
+                                public void onFailure(Call<UploadResult> call, Throwable t) {
+                                    Log.d("result_call_failure", t.toString());
+
+                                }
+
+                            });
+
+
+                            //   Toast.makeText(CustompdfActivity.this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+                        } else {
+
+                            /** There was nothing to save. **/
+                            // Toast.makeText(CustompdfActivity.this, "There were no changes in the file.", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+
+
         super.onDestroy();
     }
 
@@ -73,13 +157,12 @@ public class CustompdfActivity extends PdfActivity {
 
         Log.d("pspdf_custom", menuItems.toString());
 
-        if(menuItems.size()>1){
+        if (menuItems.size() > 1) {
 
             menuItems.remove(1);
             Log.d("pspdf_custom", "contain!!!");
 
-        }
-        else{
+        } else {
             Log.d("pspdf_custom", "not contain!!!");
         }
 
@@ -89,19 +172,19 @@ public class CustompdfActivity extends PdfActivity {
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        Log.d("pspdf_custom_prepare",String.valueOf(menu.size()));
+        Log.d("pspdf_custom_prepare", String.valueOf(menu.size()));
         return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.d("pspdf_custom_create",String.valueOf(menu.size()));
+        Log.d("pspdf_custom_create", String.valueOf(menu.size()));
         return super.onCreateOptionsMenu(menu);
     }
 
     @Override
     public boolean onDocumentSave(@NonNull @NotNull PdfDocument document, @NonNull @NotNull DocumentSaveOptions saveOptions) {
-        Log.d("pspdf_custom_save","init!");
+        Log.d("pspdf_custom_save", "init!");
      /*   Uri uri = document.getDocumentSource().getFileUri();
         File file = new File(uri.getPath());
         String outputFilePath = Environment.getExternalStoragePublicDirectory(
@@ -182,7 +265,7 @@ public class CustompdfActivity extends PdfActivity {
     @Override
     public void onBackPressed() {
 
-
+/*
         final PdfDocument document = requirePdfFragment().getDocument();
         if (document == null) {
             Log.d("response_remote", "document is null!!");
@@ -204,8 +287,14 @@ public class CustompdfActivity extends PdfActivity {
         } catch (IOException e) {
             e.printStackTrace();
         }
+*/
 
-       // super.onBackPressed();
+
+
+
+
+
+        super.onBackPressed();
 
     }
 }

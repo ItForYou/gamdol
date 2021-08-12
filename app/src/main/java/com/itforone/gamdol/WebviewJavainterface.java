@@ -9,6 +9,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
+import android.view.View;
 import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 
@@ -39,6 +40,7 @@ public class WebviewJavainterface {
     Activity activity;
     MainActivity mainActivity;
     private static final int RC_SIGN_IN = 9001;
+    static final int RESULT_DOCUMENT = 9002;
 
     public WebviewJavainterface(Activity activity, MainActivity mainActivity) {
         this.activity = activity;
@@ -47,20 +49,32 @@ public class WebviewJavainterface {
 
     @JavascriptInterface
     public void show_viewer(String idx) {
+        if (mainActivity.progressbar.getVisibility() == View.VISIBLE) {
+            Toast.makeText(mainActivity.getApplicationContext(), "현재 다운로드 중인 파일이 있습니다.", Toast.LENGTH_LONG).show();
+            return;
+        }
+        Log.d("init_idx", idx);
+
+
+        if (!idx.isEmpty()) {
+            mainActivity.download_idx = idx;
+        }
 
         WebDownloadSource webDownloadSource = null;
         try {
-             webDownloadSource = new WebDownloadSource(new URL(mainActivity.getString(R.string.pdfpath)+idx+".pdf"));
+            webDownloadSource = new WebDownloadSource(new URL(mainActivity.getString(R.string.pdfpath) + idx + ".pdf"));
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
 
         File file_saved = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+idx+".pdf");
+                Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + idx + ".pdf");
 
-        if(!file_saved.getParentFile().exists()){
+
+        if (!file_saved.getParentFile().exists()) {
             file_saved.getParentFile().mkdir();
         }
+
 
         final DownloadRequest request = new DownloadRequest.Builder(mainActivity.getApplicationContext())
                 .overwriteExisting(true)
@@ -78,25 +92,31 @@ public class WebviewJavainterface {
         job.setProgressListener(new DownloadJob.ProgressListenerAdapter() {
             @Override
             public void onProgress(@NonNull Progress progress) {
-                // progressBar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
+                //int value = (int) (100 * progress.bytesReceived / (float) progress.totalBytes);
+                //  Log.d("progress_value", String.valueOf(value));
+                mainActivity.progressbar.setVisibility(View.VISIBLE);
+                //  mainActivity.progressbar.setProgress((int) (100 * progress.bytesReceived / (float) progress.totalBytes));
             }
 
             @Override
             public void onComplete(@NonNull File output) {
-
+                mainActivity.progressbar.setVisibility(View.GONE);
                 final Intent intent = PdfActivityIntentBuilder.fromUri(mainActivity, Uri.fromFile(output))
                         .configuration(config)
                         .activityClass(CustompdfActivity.class)
                         .build();
+                intent.putExtra("open_idx", idx);
                 // pdfActivity.showDocument(context, Uri.fromFile(output), config);
-                mainActivity.startActivity(intent);
+                mainActivity.startActivityForResult(intent, RESULT_DOCUMENT);
                 mainActivity.flg_downloading = 0;
-                mainActivity.flg_showpdf =1;
+                mainActivity.flg_showpdf = 1;
             }
 
             @Override
             public void onError(@NonNull Throwable exception) {
-                //  handleDownloadError(exception);
+                mainActivity.progressbar.setVisibility(View.GONE);
+                Toast.makeText(mainActivity.getApplicationContext(), exception.toString(), Toast.LENGTH_LONG).show();
+
             }
         });
 
