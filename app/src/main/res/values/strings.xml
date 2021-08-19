@@ -1,8 +1,10 @@
 <resources>
     <string name="app_name">감돌</string>
     <string name="home">http://itforone.com/~gamdol/index.php</string>
+    <string name="home2">http://itforone.com/~gamdol/</string>
     <string name="pdfpath">http://itforone.com/~gamdol/data/file/b_pdf/</string>
     <string name="uploadpdf">http://itforone.com/~gamdol/bbs/update_pdffile.php</string>
     <string name="bbs">http://itforone.com/~gamdol/bbs/</string>
+    <string name="login">http://itforone.com/~gamdol/bbs/login_check.php?</string>
 
 </resources>

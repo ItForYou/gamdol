@@ -7,6 +7,8 @@ import android.content.ContentUris;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -15,6 +17,9 @@ import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.WindowManager;
+import android.webkit.CookieManager;
+import android.webkit.DownloadListener;
+import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -25,6 +30,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.viewpager2.widget.ViewPager2;
 
 import com.itforone.gamdol.UploadPdf.UploadHelper;
@@ -61,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
     };
+
     static final int PERMISSION_REQUEST_CODE = 1;
     final int FILECHOOSER_LOLLIPOP_REQ_CODE = 1300;
 
@@ -70,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
     WebView webView;
     @BindView(R.id.progressbar)
     ProgressBar progressbar;
-
+    String user_id, user_pwd;
     private long backPrssedTime = 0;
     int flg_downloading = 0, flg_showpdf = 0;
     String download_idx = "";
@@ -115,14 +122,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    /*
+
 
         private BroadcastReceiver downdloadReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
 
+                Toast.makeText(getApplicationContext(),"complete!!",Toast.LENGTH_LONG).show();
 
-                File file_saved = new File(Environment.getExternalStoragePublicDirectory(
+         /*       File file_saved = new File(Environment.getExternalStoragePublicDirectory(
                         Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") +"/"+String.valueOf(download_idx)+".pdf");
 
 
@@ -197,10 +205,10 @@ public class MainActivity extends AppCompatActivity {
                     //Toast.makeText(getApplicationContext(), "not exist!!!", Toast.LENGTH_LONG).show();
 
                 }
-
+*/
             }
         };
-    */
+
     @Override
     protected void onDestroy() {
 
@@ -212,7 +220,9 @@ public class MainActivity extends AppCompatActivity {
             File[] childFileList = file_delete_init.listFiles();
             Log.d("file_delete", "init");
             Log.d("file_delete", file_delete_init.toString());
-            Log.d("file_delete", String.valueOf(childFileList.length));
+            if(childFileList!=null && childFileList.length>0) {
+                Log.d("file_delete", String.valueOf(childFileList.length));
+            }
             if (file_delete_init.exists()) {
                 Log.d("file_delete", "exist!!");
                 for (File childFile : childFileList) {
@@ -278,7 +288,7 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 */
-        //registerReceiver(downdloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        registerReceiver(downdloadReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         webView.setWebChromeClient(new ChromeManager(this, this));
         webView.setWebViewClient(new ViewManager(this, this));
@@ -296,34 +306,128 @@ public class MainActivity extends AppCompatActivity {
         settings.setTextZoom(100);       // 폰트크기 고정
         settings.setUserAgentString(settings.getUserAgentString() + "gamdolapp");
 
+        webView.setDownloadListener(new DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition, String mimetype, long contentLength) {
+                try {
+
+                    //String fileName = URLUtil.guessFileName(url, contentDisposition, mimetype);
+                    //fileName = URLEncoder.encode(fileName, "EUC-KR").replace("+", "%20");
+                    //fileName = URLDecoder.decode(fileName, "UTF-8");
+                    DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+                    request.setMimeType(mimetype);
+                    Log.d("file_error", "step1");
+                    //------------------------COOKIE!!------------------------
+                    String cookies = CookieManager.getInstance().getCookie(url);
+                    Log.d("file_error", cookies);
+                    request.addRequestHeader("cookie", cookies);
+                    //------------------------COOKIE!!------------------------
+                    request.addRequestHeader("User-Agent", userAgent);
+                    request.setDescription("Downloading file...");
+                    request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimetype));
+                    request.allowScanningByMediaScanner();
+                    Log.d("file_error", "step3");
+                    request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+                    request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(url, contentDisposition, mimetype));
+                    Log.d("file_error", "step4");
+
+                    DownloadManager dm = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                    Log.d("file_error", "step5");
+                    dm.enqueue(request);
+                    Log.d("file_error", "step6");
+                    Toast.makeText(getApplicationContext(), "다운로드 시작..", Toast.LENGTH_LONG).show();
+                    Log.d("file_error", "step7");
+                    //Toast.makeText(getApplicationContext(), fileName, Toast.LENGTH_LONG).show();
+
+                } catch (Exception e) {
+                    Log.d("file_error_catch", e.toString());
+                    /*if (ContextCompat.checkSelfPermission(MainActivity.this,
+                            android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                            != PackageManager.PERMISSION_GRANTED) {
+                        // Should we show an explanation?
+                        if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                                android.Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                            Toast.makeText(getBaseContext(), "첨부파일 다운로드를 위해\n동의가 필요합니다.", Toast.LENGTH_LONG).show();
+                            ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                    110);
+                        } else {
+                            Toast.makeText(getBaseContext(), "첨부파일 다운로드를 위해\n동의가 필요합니다.", Toast.LENGTH_LONG).show();
+                            ActivityCompat.requestPermissions(MainActivity.this, new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                    110);
+                        }
+                    }*/
+                }
+            }
+        });
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.setWebContentsDebuggingEnabled(true);
         }
 
-        webView.loadUrl(getString(R.string.home));
+        SharedPreferences pref = getSharedPreferences("logininfo", MODE_PRIVATE);
+        user_id = pref.getString("id", "");
+        user_pwd = pref.getString("pwd", "");
+
+      //  Toast.makeText(getApplicationContext(), user_id+","+user_pwd,Toast.LENGTH_LONG).show();
+
+        if(!user_id.isEmpty() && !user_pwd.isEmpty()){
+            webView.loadUrl(getString(R.string.login) + "mb_id=" + user_id + "&mb_password=" + user_pwd);
+        }
+        else{
+            webView.loadUrl(getString(R.string.home));
+        }
 
     }
 
     @Override
     public void onBackPressed() {
-
+//        Toast.makeText(getApplicationContext(), webView.getUrl(), Toast.LENGTH_SHORT).show();
         long tempTime = System.currentTimeMillis();
         long intervalTime = tempTime - backPrssedTime;
 
-        if (!webView.canGoBack() || webView.getUrl().contains("all_contact")) {
+        if(webView.getUrl().equals(getString(R.string.home)) || webView.getUrl().equals(getString(R.string.home2))){
             if (0 <= intervalTime && 2000 >= intervalTime) {
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+
                     finishAndRemoveTask();
+
                 } else {
+
                     finish();
+
                 }
 
             } else {
+
                 backPrssedTime = tempTime;
                 Toast.makeText(getApplicationContext(), "한번 더 뒤로가기 누를시 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+
+            }
+        }
+        else if (!webView.canGoBack() || webView.getUrl().contains("all_contact")) {
+            if (0 <= intervalTime && 2000 >= intervalTime) {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+
+                    finishAndRemoveTask();
+
+                } else {
+
+                    finish();
+
+                }
+
+            } else {
+
+                backPrssedTime = tempTime;
+                Toast.makeText(getApplicationContext(), "한번 더 뒤로가기 누를시 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+
             }
         } else {
+
             webView.goBack();
+
         }
 
     }
@@ -363,10 +467,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
             }
             case RESULT_DOCUMENT: {
-
-
-
-
 
 
 

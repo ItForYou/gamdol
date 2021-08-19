@@ -13,9 +13,13 @@
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
+        android:hardwareAccelerated="false"
+        android:largeHeap="true"
         android:theme="@style/Theme.Gamdol">
 
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            >
         </activity>
 
         <activity
@@ -23,7 +27,9 @@
             android:windowSoftInputMode="adjustNothing"
             />
 
-        <activity android:name=".SplashActivity">
+        <activity android:name=".SplashActivity"
+            android:screenOrientation="portrait"
+            >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -35,6 +41,7 @@
 
                 <data android:host="action" android:scheme="gamdol" />
             </intent-filter>
+
         </activity>
 
         <provider

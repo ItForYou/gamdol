@@ -1,6 +1,7 @@
 package com.itforone.gamdol.pspdf;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -15,10 +16,14 @@ import com.itforone.gamdol.R;
 import com.itforone.gamdol.UploadPdf.UploadHelper;
 import com.itforone.gamdol.UploadPdf.UploadResult;
 import com.itforone.gamdol.UploadPdf.UploadService;
+import com.pspdfkit.annotations.Annotation;
+import com.pspdfkit.annotations.AnnotationProvider;
 import com.pspdfkit.document.DocumentSaveOptions;
 import com.pspdfkit.document.PdfDocument;
 import com.pspdfkit.document.providers.DataProvider;
 import com.pspdfkit.ui.PdfActivity;
+import com.pspdfkit.ui.special_mode.controller.AnnotationSelectionController;
+import com.pspdfkit.ui.special_mode.manager.AnnotationManager;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -40,21 +45,73 @@ import retrofit2.Response;
 
 public class CustompdfActivity extends PdfActivity {
 
-    String fromIdx;
+    String fromIdx, mb_id="";
 
     @Override
     protected void onCreate(@Nullable @org.jetbrains.annotations.Nullable Bundle savedInstanceState) {
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-
         Intent i = getIntent();
 
         if (i != null) {
             fromIdx = i.getStringExtra("open_idx");
         }
+
         Log.d("custom_init", fromIdx);
 
+        SharedPreferences pref = getSharedPreferences("logininfo", MODE_PRIVATE);
+        mb_id = pref.getString("id", "");
+
+        if(mb_id.isEmpty()){
+            Toast.makeText(getApplicationContext(),"로그인 후 이용해 주세요.",Toast.LENGTH_LONG).show();
+            finish();
+        }
         super.onCreate(savedInstanceState);
+
+
+
+
+        getPdfFragment().addOnAnnotationSelectedListener(new AnnotationManager.OnAnnotationSelectedListener() {
+            @Override
+            public boolean onPrepareAnnotationSelection(@NonNull AnnotationSelectionController controller, @NonNull Annotation annotation, boolean annotationCreated) {
+                // Returning `false` here would prevent the annotation from being selected.
+                return true;
+            }
+
+            @Override public void onAnnotationSelected(@NonNull Annotation annotation, boolean annotationCreated) {
+                Log.i("Annotation_selected", "The annotation was selected");
+            }
+        });
+
+        getPdfFragment().addOnAnnotationDeselectedListener(new AnnotationManager.OnAnnotationDeselectedListener() {
+            @Override public void onAnnotationDeselected(@NonNull Annotation annotation, boolean reselected) {
+                Log.i("Annotation_deselected", "The annotation was deselected");
+            }
+        });
+
+        getPdfFragment().addOnAnnotationUpdatedListener(new AnnotationProvider.OnAnnotationUpdatedListener() {
+            @Override
+            public void onAnnotationCreated(@NonNull Annotation annotation) {
+                Log.i("Annotation_update", "The annotation was created.");
+            }
+
+            @Override
+            public void onAnnotationUpdated(@NonNull Annotation annotation) {
+                Log.i("Annotation_selected", "The annotation was updated.");
+            }
+
+            @Override
+            public void onAnnotationRemoved(@NonNull Annotation annotation) {
+                Log.i("Annotation_selected", "The annotation was removed.");
+            }
+
+            @Override
+            public void onAnnotationZOrderChanged(int i, @NonNull @NotNull List<Annotation> list, @NonNull @NotNull List<Annotation> list1) {
+
+            }
+        });
+        // This will remove all previously registered listeners. Instead, you could unregister them selectively.
+
 
 
     }
@@ -84,68 +141,89 @@ public class CustompdfActivity extends PdfActivity {
         } catch (Exception e) {
             e.printStackTrace();
         }*/
+        if(!mb_id.isEmpty()) {
+            /** Manually saving inside the activity. **/
+            PdfDocument document = getPdfFragment().getDocument();
+            if (document == null) {
+                // No document loaded.
+                return;
+            }
+            Toast.makeText(getApplicationContext(),"수정된 파일이 업로드 중 입니다.",Toast.LENGTH_LONG).show();
+            document.saveIfModifiedAsync()
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new DisposableSingleObserver<Boolean>() {
+                        @Override
+                        public void onError(Throwable e) {
+                            /** Saving has failed. The exception holds additional failure details. **/
+                            //    Toast.makeText(CustompdfActivity.this, "Failed to save the document!", Toast.LENGTH_SHORT).show();
+                        }
 
-        /** Manually saving inside the activity. **/
-        PdfDocument document = getPdfFragment().getDocument();
-        if (document == null) {
-            // No document loaded.
-            return;
-        }
-        document.saveIfModifiedAsync()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new DisposableSingleObserver<Boolean>() {
-                    @Override
-                    public void onError(Throwable e) {
-                        /** Saving has failed. The exception holds additional failure details. **/
-                        //    Toast.makeText(CustompdfActivity.this, "Failed to save the document!", Toast.LENGTH_SHORT).show();
-                    }
+                        @Override
+                        public void onSuccess(Boolean saved) {
+                            if (saved) {
+                                /** Changes were saved successfully! **/
+                                File file_saved = new File(Environment.getExternalStoragePublicDirectory(
+                                        Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + fromIdx + ".pdf");
 
-                    @Override
-                    public void onSuccess(Boolean saved) {
-                        if (saved) {
-                            /** Changes were saved successfully! **/
-                            File file_saved = new File(Environment.getExternalStoragePublicDirectory(
-                                    Environment.DIRECTORY_DOWNLOADS + "/pdfFiles") + "/" + fromIdx + ".pdf");
+                                RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file_saved);
+                                MultipartBody.Part file = MultipartBody.Part.createFormData("pdf_file", file_saved.getName(), requestFile);
+                                RequestBody fromidx = RequestBody.create(MediaType.parse("text/plain"), fromIdx);
+                                RequestBody request_mbid = RequestBody.create(MediaType.parse("text/plain"), mb_id);
 
-                            RequestBody requestFile = RequestBody.create(MediaType.parse("multipart/form-data"), file_saved);
-                            MultipartBody.Part file = MultipartBody.Part.createFormData("pdf_file", file_saved.getName(), requestFile);
-                            RequestBody fromidx = RequestBody.create(MediaType.parse("text/plain"), fromIdx);
+                                if (file_saved != null) {
+                                    file_saved.length();
+                                }
 
-                            UploadService networkService = UploadHelper.getRetrofit().create(UploadService.class);
-                            Call<UploadResult> call = networkService.uploadFile(fromidx,file);
-                            call.enqueue(new Callback<UploadResult>() {
-                                @Override
-                                public void onResponse(Call<UploadResult> call, Response<UploadResult> response) {
 
-                                    Log.d("result_call_response", response.toString());
-                                    if (response.isSuccessful()) {
-                                        Log.d("result_call_success", "success");
 
-                                    } else {
-                                        Log.d("result_call_fail", "fail");
+                                UploadService networkService = UploadHelper.getRetrofit().create(UploadService.class);
+                                Call<UploadResult> call = networkService.uploadFile(fromidx, file, request_mbid);
+                                call.enqueue(new Callback<UploadResult>() {
+
+                                    @Override
+                                    public void onResponse(Call<UploadResult> call, Response<UploadResult> response) {
+
+                                        if (response.isSuccessful()) {
+
+                                            if(!response.body().getResult().contains("empty")){
+                                                Log.d("result_call_fail", "notempty!!");
+                                                Toast.makeText(getApplicationContext(),"수정된 파일이 업로드 완료 되었습니다.",Toast.LENGTH_LONG).show();
+
+                                            }
+                                            else{
+                                                Log.d("result_call_fail", "empty!!");
+                                            }
+
+
+                                        } else {
+
+                                            Log.d("result_call_fail", "fail");
+
+                                        }
 
                                     }
 
-                                }
+                                    @Override
+                                    public void onFailure(Call<UploadResult> call, Throwable t) {
 
-                                @Override
-                                public void onFailure(Call<UploadResult> call, Throwable t) {
-                                    Log.d("result_call_failure", t.toString());
+                                        Log.d("result_call_failure", t.toString());
 
-                                }
+                                    }
 
-                            });
+                                });
 
 
-                            //   Toast.makeText(CustompdfActivity.this, "Saved successfully!", Toast.LENGTH_SHORT).show();
-                        } else {
+                                //   Toast.makeText(CustompdfActivity.this, "Saved successfully!", Toast.LENGTH_SHORT).show();
+                            } else {
 
-                            /** There was nothing to save. **/
-                            // Toast.makeText(CustompdfActivity.this, "There were no changes in the file.", Toast.LENGTH_SHORT).show();
+                                /** There was nothing to save. **/
+                                // Toast.makeText(CustompdfActivity.this, "There were no changes in the file.", Toast.LENGTH_SHORT).show();
+                            }
                         }
-                    }
-                });
+                    });
+        }
 
+    //    Toast.makeText(getApplicationContext(),"수정한 내용이 반영되기까지 시간이 걸릴 수 있습니다", Toast.LENGTH_LONG).show();
 
         super.onDestroy();
     }

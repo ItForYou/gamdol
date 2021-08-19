@@ -21,6 +21,7 @@ import androidx.core.content.FileProvider;
 
 import com.itforone.gamdol.pspdf.CustompdfActivity;
 import com.itforone.gamdol.pspdf.WebDownloadSource;
+import com.pspdfkit.annotations.AnnotationType;
 import com.pspdfkit.configuration.activity.PdfActivityConfiguration;
 import com.pspdfkit.configuration.sharing.ShareFeatures;
 import com.pspdfkit.document.download.DownloadJob;
@@ -33,7 +34,10 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
+
+import static android.content.Context.MODE_PRIVATE;
 
 public class WebviewJavainterface {
 
@@ -83,7 +87,8 @@ public class WebviewJavainterface {
                 .build();
 
         final DownloadJob job = DownloadJob.startDownload(request);
-        PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity.getApplicationContext())
+        final PdfActivityConfiguration config = new PdfActivityConfiguration.Builder(mainActivity.getApplicationContext())
+                .editableAnnotationTypes(Arrays.asList(AnnotationType.HIGHLIGHT, AnnotationType.INK, AnnotationType.STAMP))
                 .setEnabledShareFeatures(ShareFeatures.none())
                 .autosaveEnabled(false)
                 .disablePrinting()
@@ -100,6 +105,7 @@ public class WebviewJavainterface {
 
             @Override
             public void onComplete(@NonNull File output) {
+
                 mainActivity.progressbar.setVisibility(View.GONE);
                 final Intent intent = PdfActivityIntentBuilder.fromUri(mainActivity, Uri.fromFile(output))
                         .configuration(config)
@@ -110,16 +116,40 @@ public class WebviewJavainterface {
                 mainActivity.startActivityForResult(intent, RESULT_DOCUMENT);
                 mainActivity.flg_downloading = 0;
                 mainActivity.flg_showpdf = 1;
+
             }
 
             @Override
             public void onError(@NonNull Throwable exception) {
+
                 mainActivity.progressbar.setVisibility(View.GONE);
                 Toast.makeText(mainActivity.getApplicationContext(), exception.toString(), Toast.LENGTH_LONG).show();
 
             }
         });
 
+
+    }
+
+    @JavascriptInterface
+    public void setLogininfo(String mb_id, String mb_pwd) {
+
+        SharedPreferences pref = mainActivity.getSharedPreferences("logininfo", MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.putString("id",mb_id);
+        editor.putString("pwd",mb_pwd);
+        editor.commit();
+
+    }
+
+    @JavascriptInterface
+    public void setlogout() {
+
+        // Toast.makeText(activity.getApplicationContext(),"logout",Toast.LENGTH_LONG).show();
+        SharedPreferences pref = activity.getSharedPreferences("logininfo", activity.MODE_PRIVATE);
+        SharedPreferences.Editor editor = pref.edit();
+        editor.clear();
+        editor.commit();
 
     }
 

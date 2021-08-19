@@ -13,6 +13,6 @@ public interface UploadService {
     @Multipart
     @POST("update_pdffile.php")
     //Call<UploadResult> uploadFile(@Part("idx") RequestBody idx);
-    Call<UploadResult> uploadFile(@Part("idx") RequestBody idx, @Part MultipartBody.Part pdf_file);
+    Call<UploadResult> uploadFile(@Part("idx") RequestBody idx, @Part MultipartBody.Part pdf_file, @Part("mb_id") RequestBody mb_id);
 
 }
